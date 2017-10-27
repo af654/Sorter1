@@ -222,7 +222,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		printf("error could not close dir");
 		return -3;
 	}
-
+	printf("total number of processes created %d\n", counter);
 	//outputMetadata(childPids,totalprocesses);
 }
 

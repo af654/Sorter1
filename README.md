@@ -1,2 +1,2 @@
 # Sorter1
-Read in a directory name and walk through the directory structure to find all .csv files
+IF YOU'RE IN SYSTEMS DONT USE THIS THANKS

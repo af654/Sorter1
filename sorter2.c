@@ -142,7 +142,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			char pathname [256];
 			FILE* csvFile;
 			sprintf(pathname, "%s/%s", dir_name, d_name);
-			//csvFile = fopen(pathname, "r");
+			csvFile = fopen(pathname, "r");
 
 			if (csvFile!=NULL) //check for valid csv file 
 			{

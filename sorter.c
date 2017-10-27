@@ -86,7 +86,7 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     char* columnToSortType;
     char* line = NULL;
     char* token, *tokenType, *headerLine;            
-    size_t size;    
+    size_t size = 128;    
     FILE* csv_out; 
     //Allocate space for number of rows in file
     Row *rows[NUM_ROWS];
@@ -94,20 +94,25 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
 
     //Get index of the column we want to sort by
     columnToSortIndex = isValidColumn(columnToSort);
+
     if(!columnToSortType) {
         printf("ERROR COLUMN IS NOT VALID!\n");
         return(1);
     }
     columnToSortType = validColumnTypes[columnToSortIndex];
-    csv_in = fopen(pathToCSV,"r");
+    //csv_in = fopen(pathToCSV,"r");
 
     printf("file output path:%s\n", pathToCSV);
     printf("sorting this column: %s\n", columnToSort);
     
+    if(NULL == csv_in){
+        printf("NULL FILE");
+    }
     //Skip first row
     char * input;
+    line = (char *)malloc(128 * sizeof(char));
     input = getline(&line, &size, csv_in);
-    printf("%s\n",input);
+    printf("input=%s\n",input);
     headerLine = (char *) malloc(strlen(line));
     strcpy(headerLine,line);
     if(NULL == csv_in){

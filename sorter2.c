@@ -9,47 +9,42 @@
 #include "sorter.c"
 #include "sorter2.h"
 
-int main (int argc, char* argv[])
-{
-	//initialize all variables
-	char* column_to_sort; 
+int main (int argc, char* argv[]) {
 	//processes,pids, and original parent
 	//storing children ids 
 	pid_t* childPids = (pid_t*)(malloc(sizeof(pid_t) * 256));
-	//work with this for now ./sorter -c  movie_title -d thisdir -o thatdir
-	//also have to account for ./sorter -c  movie_title
-	//also have to account for ./sorter -c  movie_title -d thisdir/thatdir
+	
 	//check inputs 
+	char *errorMessage = "The command line must follow either:\n./sorter -c  valid_column -d inputdir -o outputdir\n./sorter -c  valid_column -d inputdir\n./sorter -c  valid_column";
 	if(strcmp(argv[1],"-c") !=0){
-		printf("The command line must follow the following format:\ncat input.file | ./sorter -c  movie_title -d thisdir -o thatdir or \n./sorter -c  movie_title");
+		printf("%s",errorMessage);
+		exit(1);
 	}
 
-	column_to_sort = argv[2];
+	char* column_to_sort = argv[2];
 
 	if(argc == 3){ //Default behavior is search the current directory
-		FILE *csv_in = fopen("./adir/movie_metadata.csv","r");
-    	FILE *csv_out = fopen("./adir/sorted_movie_metadata.csv","w");
-    	sortnew(csv_in, csv_out, column_to_sort);
-    	fclose(csv_in);   
-    	exit(0);
-
+		travdir(childPids, "./", column_to_sort, NULL);
 	} else if (argc == 5){
 		if (strcmp(argv[3],"-d") != 0) {
-			  printf("The command line must follow the following format:\n./sorter -c  movie_title -d thisdir -o thatdir");
-			  exit(1);
+			printf("%s",errorMessage);
+			exit(1);
 		} else {
 			//time to check if this is a csv file or a directory
 			travdir(childPids, argv[4], column_to_sort, NULL);
 		}
 	} else if (argc == 7){
 		if (strcmp(argv[3],"-d") != 0 && strcmp(argv[5],"-o") != 0) {
-			  printf("The command line must follow the following format:\n./sorter -c  movie_title -d thisdir -o thatdir");
-			  exit(1);
+			printf("%s",errorMessage);
+			exit(1);
 		} else {
 			//time to check if this is a csv file or a directory
 			//-o output csv files to a certain directory thatdir if they specify -> argv[6] is output directory
 			travdir(childPids, argv[4], column_to_sort, argv[6]);
 		}
+	} else {
+		printf("%s",errorMessage);
+		exit(1);		
 	}
 
 	return 0;
@@ -59,7 +54,7 @@ int main (int argc, char* argv[])
 int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, const char * output_dir)
 {
 	printf("opening first directory : %s\n",dir_name);
-	//counter counts how many child processes
+	//counter counts how many child processes have been created
 	int counter = 0;
 	DIR * directory = opendir(dir_name);
 
@@ -80,20 +75,17 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		if(counter == 256){
 			break;
 		}
-
-		if(!currEntry)
-		{
-			//end of file stream, break-> now wait for children and children's children
+		
+		//end of file stream, break-> now wait for children and children's children
+		if(!currEntry) {
 			break;
 		}
 		//d_name is the current directory/file
 		d_name = currEntry->d_name;
 
 		//this is a directory 
-		if(currEntry->d_type==DT_DIR)
-		{
-			if(strcmp(d_name,".") != 0 && strcmp(d_name, "..") != 0)
-			{
+		if(currEntry->d_type==DT_DIR) {
+			if(strcmp(d_name,".") != 0 && strcmp(d_name, "..") != 0) {
 				counter++;
 				//need to EXTEND THE PATH for next travdir call, working dir doesn't change (think adir/ -> adir/bdir/....)
 				int pathlength = 0;	
@@ -110,10 +102,6 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				pid = fork();
 				//ppid = getppid();
 
-				//if(counter ==0){
-					//printf("%sthe initial parent process ", ppid);
-				//}
-
 				if (pid < 0) {
           			printf("Failed to fork process 1\n");
          			break;
@@ -121,12 +109,11 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				else if(pid==0){ //if child then go to newpath
 					//record new pathname
 					printf("This is the child process searching through next directory. My pid is %d and my parent's id is %d.\n", getpid(), getppid());
-					char * temp2 = malloc(sizeof(char)*256);
-					strcpy(temp2,dir_name);
-					strcat(temp2,"/");
-					strcat(temp2,d_name);
-					directory = opendir(temp2);
-					free(temp2);
+					strcpy(currentPath,dir_name);
+					strcat(currentPath,"/");
+					strcat(currentPath,d_name);
+					directory = opendir(currentPath);
+					free(currentPath);
 				}
 				else if(pid>0){ //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);
@@ -136,9 +123,9 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
                     childPids[counter]=child_id;
                     printf( "%sparent forked new child \n", child_id);
 				}
-				//printf("%s\n",d_name); //error checking and DEBUGGING
 			}
-		} else if(currEntry->d_type==DT_REG){ 	//regular files, need to check to ensure ".csv"
+		} 
+		else if(currEntry->d_type == DT_REG) { 	//regular files, need to check to ensure ".csv"
 			//need a for loop to go through the directory to get all csvs - pointer and travdir once at the end of the list of csvs in that one dir	
 			printf("checked that the csv is a file\n");
 			char pathname [256];
@@ -146,8 +133,13 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			sprintf(pathname, "%s/%s", dir_name, d_name);
 			csvFile = fopen(pathname, "r");
 
-			if (csvFile!=NULL && !isAlreadySorted(pathname, column_to_sort)) //check for valid csv file 
-			{
+			//Check to see if the file is a csv
+			char *lastdot = strrchr(d_name, '.');
+
+			if (strcmp(lastdot,".csv") != 0) {
+				printf("File is not a .csv: %s\n", d_name);
+			} 
+			else if (csvFile != NULL && !isAlreadySorted(pathname, column_to_sort)) {
 				//IF THE FILE CONTAINS 
 				counter++;
 				//specify to what directory openddir and then do d_name
@@ -192,7 +184,6 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 					strcat(csvFileOutputPath,".csv");
 					
 					printf("pathname: %s\n", csvFileOutputPath);
-					printf("directory running in while loop: %s\n", directory);
 					printf("d_name: %s\n",d_name);
 					char * path;
 
@@ -205,8 +196,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 					printf("path that child spit out sort process to%s\n", path);
 					//have to somehow end the child process when it ends before parent is done
 					
-				}
-				else if(pid>0) { //parent
+				} else if(pid>0) { //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);
 					pid_t child_id;
 					child_id = pid; 

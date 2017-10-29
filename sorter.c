@@ -162,7 +162,7 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
             colIndex++;
         }
         //printf("\n");
-        rowIndex++;       
+        rowIndex++;
     }
     validNumRows = rowIndex;
 

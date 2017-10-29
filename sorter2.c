@@ -26,7 +26,7 @@ int main (int argc, char* argv[])
 
 	column_to_sort = argv[2];
 
-	if(argc == 3){
+	if(argc == 3){ //Default behavior is search the current directory
 		FILE *csv_in = fopen("./adir/movie_metadata.csv","r");
     	FILE *csv_out = fopen("./adir/sorted_movie_metadata.csv","w");
     	sortnew(csv_in, csv_out, column_to_sort);
@@ -42,7 +42,7 @@ int main (int argc, char* argv[])
 			travdir(childPids, argv[4], column_to_sort, NULL);
 		}
 	} else if (argc == 7){
-		if (strcmp(argv[3],"-d") != 0) {
+		if (strcmp(argv[3],"-d") != 0 && strcmp(argv[5],"-o") != 0) {
 			  printf("The command line must follow the following format:\n./sorter -c  movie_title -d thisdir -o thatdir");
 			  exit(1);
 		} else {
@@ -77,7 +77,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		printf("I am in a directory, it got here\n");
 
 		//making sure not to fork bomb
-		if(counter==10){
+		if(counter == 256){
 			break;
 		}
 
@@ -146,8 +146,9 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			sprintf(pathname, "%s/%s", dir_name, d_name);
 			csvFile = fopen(pathname, "r");
 
-			if (csvFile!=NULL) //check for valid csv file 
+			if (csvFile!=NULL && !isAlreadySorted(pathname, column_to_sort)) //check for valid csv file 
 			{
+				//IF THE FILE CONTAINS 
 				counter++;
 				//specify to what directory openddir and then do d_name
 				printf("File not null\n");
@@ -164,22 +165,32 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				else if(pid == 0){ //if child then sort
 					printf("This is the child process. My pid is %d and my parent's id is %d.\n", getpid(), getppid());
 					//change path for accessing the csv file
-					char * csvFileOutputPath = malloc(sizeof(char)*256);
-					//Remove the ".csv" from d_name
+					char * csvFileOutputPath = malloc(sizeof(char)*512);
+					//Remove the ".csv" from d_name to insert "-sorted-VALIDCOLUMN.csv
 					char *file_name = (char *) malloc(strlen(d_name) + 1);
 					strcpy(file_name, d_name);					
 					char *lastdot = strrchr(file_name, '.');
 					if (lastdot != NULL){
 						*lastdot = '\0';
 					}
+					
+					//Default behavior dumps files into current directory
+					if(output_dir == NULL) {
+						strcpy(csvFileOutputPath,dir_name);
+					} else { //If given an output directory
+						struct stat sb;
+						if (stat(output_dir, &sb) == -1) {
+							mkdir(output_dir, 0700); //RWX for owner
+						} 
+						strcpy(csvFileOutputPath,output_dir);
+					}
 
-					strcpy(csvFileOutputPath,dir_name);
 					strcat(csvFileOutputPath,"/");
 					strcat(csvFileOutputPath,file_name);
 					strcat(csvFileOutputPath,"-sorted-");
 					strcat(csvFileOutputPath,column_to_sort);
 					strcat(csvFileOutputPath,".csv");
-
+					
 					printf("pathname: %s\n", csvFileOutputPath);
 					printf("directory running in while loop: %s\n", directory);
 					printf("d_name: %s\n",d_name);
@@ -205,7 +216,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			//wait after parent is done looking for csvs and THEN wait for children to end
 			//once the child is done fork will return 0 
 			} else {
-				printf("%s\n", d_name);
+				printf("File has already been sorted or is NULL: %s\n", d_name);
 			}
 		} else {
 			fprintf(stderr, "ERROR: Input is not a file or a directory\n");
@@ -220,6 +231,8 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 	int totalprocesses = counter;
 	printf("totalprocesses before waiting: %d\n",totalprocesses);
 	//childPids[counter]; 
+
+	printf("total number of processes created %d\n", counter);	
 
 	while(counter >= 0){
 		//wait() is used to wait until any one child process terminates
@@ -236,8 +249,28 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		printf("error could not close dir");
 		return -3;
 	}
-	printf("total number of processes created %d\n", counter);
 	//outputMetadata(childPids,totalprocesses);
+}
+
+//Will check the file name of th input file pointer.
+//If it already contains the phrase -sorted-SOMEVALIDCOLUMN.csv then the file is already sorted
+//Returns 0 if the file has not yet been sorted
+//Returns 1 if the file has been sorted
+int isAlreadySorted(char *pathname,char *column_to_sort) {
+	char *compareString = (char *) malloc(strlen("-sorted-") + strlen(column_to_sort) + strlen(".csv") + 1);
+	//build the -sorted-SOMEVALIDCOLUMN.csv string
+	strcpy(compareString, "-sorted-");
+	strcat(compareString, column_to_sort);
+	strcat(compareString, ".csv");
+
+	if(strstr(pathname,compareString) == NULL) {
+		free(compareString);		
+		return 0;
+	} else {
+		free(compareString);
+		return 1;		
+	}
+
 }
 
 /*//Your code's output will be a series of new CSV files outputted to the file whose name is the name of the CSV file sorted, with "-sorted-<fieldname>" postpended to the name.

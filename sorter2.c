@@ -109,6 +109,8 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				else if(pid==0){ //if child then go to newpath
 					//record new pathname
 					printf("This is the child process searching through next directory. My pid is %d and my parent's id is %d.\n", getpid(), getppid());
+					//need to malloc for currentPath
+					char * currentPath = malloc(sizeof(char)*256);
 					strcpy(currentPath,dir_name);
 					strcat(currentPath,"/");
 					strcat(currentPath,d_name);

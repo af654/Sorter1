@@ -79,8 +79,8 @@ void merge(Row **row, int left, int mid, int right) {
 
 
 long doCompare(Row *row1, Row *row2) {
-    const char* r1Value = row1->colEntries[colIdx].value;
-    const char* r2Value = row2->colEntries[colIdx].value;
+    const char* r1Value = (row1->colEntries)[colIdx].value;
+    const char* r2Value = (row2->colEntries)[colIdx].value;
     
     if (strcmp(colType, "char") == 0) {
 		//Skip the quotes

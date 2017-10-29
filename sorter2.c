@@ -27,15 +27,16 @@ int main (int argc, char* argv[])
 	column_to_sort = argv[2];
 
 	if(argc == 3){
-		FILE *csv_in = fopen("./movie_metadata.csv","r");
-    	char * output = "./sorted_movie_metadata.csv";
-    	sortnew(csv_in, output, column_to_sort);
+		FILE *csv_in = fopen("./adir/movie_metadata.csv","r");
+    	FILE *csv_out = fopen("./adir/sorted_movie_metadata.csv","w");
+    	sortnew(csv_in, csv_out, column_to_sort);
     	fclose(csv_in);   
-    	return 0;
+    	exit(0);
 
 	} else if (argc == 5){
 		if (strcmp(argv[3],"-d") != 0) {
 			  printf("The command line must follow the following format:\n./sorter -c  movie_title -d thisdir -o thatdir");
+			  exit(1);
 		} else {
 			//time to check if this is a csv file or a directory
 			travdir(childPids, argv[4], column_to_sort, NULL);
@@ -43,6 +44,7 @@ int main (int argc, char* argv[])
 	} else if (argc == 7){
 		if (strcmp(argv[3],"-d") != 0) {
 			  printf("The command line must follow the following format:\n./sorter -c  movie_title -d thisdir -o thatdir");
+			  exit(1);
 		} else {
 			//time to check if this is a csv file or a directory
 			//-o output csv files to a certain directory thatdir if they specify -> argv[6] is output directory
@@ -72,7 +74,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		struct dirent * currEntry;
 		char * d_name;
 		currEntry = readdir(directory);
-		printf("it got here\n");
+		printf("I am in a directory, it got here\n");
 
 		//making sure not to fork bomb
 		if(counter==10){
@@ -148,7 +150,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			{
 				counter++;
 				//specify to what directory openddir and then do d_name
-				printf("file not null\n");
+				printf("File not null\n");
 
 				pid_t ppid,pid;
 				//fork returns 0 if child process
@@ -159,27 +161,39 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
          			break;
      			}
 				//copies the code that you are running and returns zero to a new pid 
-				else if(pid==0){ //if child then sort
+				else if(pid == 0){ //if child then sort
 					printf("This is the child process. My pid is %d and my parent's id is %d.\n", getpid(), getppid());
 					//change path for accessing the csv file
-					char * temp3 = malloc(sizeof(char)*256);
-					strcpy(temp3,dir_name);
-					strcat(temp3,"/");
-					strcat(temp3,d_name);
+					char * csvFileOutputPath = malloc(sizeof(char)*256);
+					//Remove the ".csv" from d_name
+					char *file_name = (char *) malloc(strlen(d_name) + 1);
+					strcpy(file_name, d_name);					
+					char *lastdot = strrchr(file_name, '.');
+					if (lastdot != NULL){
+						*lastdot = '\0';
+					}
 
-					printf("pathname%s\n", temp3);
-					printf("directory running in while loop%s\n", directory);
-					printf("d_name%s\n",d_name);
+					strcpy(csvFileOutputPath,dir_name);
+					strcat(csvFileOutputPath,"/");
+					strcat(csvFileOutputPath,file_name);
+					strcat(csvFileOutputPath,"-sorted-");
+					strcat(csvFileOutputPath,column_to_sort);
+					strcat(csvFileOutputPath,".csv");
+
+					printf("pathname: %s\n", csvFileOutputPath);
+					printf("directory running in while loop: %s\n", directory);
+					printf("d_name: %s\n",d_name);
 					char * path;
 
-					//input to sort: pathname d_name and file pointer csvFile
-					//sort returns path of csv it has written to in path d_name
-					//temp3 is path to output - right now it is just the directory the csv file is in 
-					//path = sort(csvFile, temp3, column_to_sort);
-					sortnew(csvFile, temp3, column_to_sort);
+					FILE *csvFileOut = fopen(csvFileOutputPath,"w");
+					
+					free(csvFileOutputPath);
+					free(file_name);
+
+					sortnew(csvFile, csvFileOut, column_to_sort);
 					printf("path that child spit out sort process to%s\n", path);
 					//have to somehow end the child process when it ends before parent is done
-					free(temp3);
+					
 				}
 				else if(pid>0) { //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);

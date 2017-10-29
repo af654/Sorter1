@@ -78,7 +78,7 @@ const char* validColumnTypes[] = {
     "int"
 };
 
-char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
+void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     printf("testing sort\n");
     int i,j;
     int columnToSortIndex, validNumRows;
@@ -87,7 +87,6 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     char* line = NULL;
     char* token, *tokenType, *headerLine;            
     size_t size = 128;    
-    FILE* csv_out; 
     //Allocate space for number of rows in file
     Row *rows[NUM_ROWS];
     printf("starting to sort the file now\n");
@@ -95,14 +94,12 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     //Get index of the column we want to sort by
     columnToSortIndex = isValidColumn(columnToSort);
 
-    if(!columnToSortType) {
+    if(columnToSortIndex == -1) {
         printf("ERROR COLUMN IS NOT VALID!\n");
-        return(1);
+        exit(1);
     }
     columnToSortType = validColumnTypes[columnToSortIndex];
-    //csv_in = fopen(pathToCSV,"r");
 
-    printf("file output path:%s\n", pathToCSV);
     printf("sorting this column: %s\n", columnToSort);
     
     if(NULL == csv_in){
@@ -110,9 +107,10 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     }
     //Skip first row
     char * input;
-    line = (char *)malloc(128 * sizeof(char));
-    input = getline(&line, &size, csv_in);
-    printf("input=%s\n",input);
+    line = (char *)malloc(1024 * sizeof(char));
+    getline(&line, &size, csv_in);
+    
+    printf("input line: %s\n",line);
     headerLine = (char *) malloc(strlen(line));
     strcpy(headerLine,line);
     if(NULL == csv_in){
@@ -120,25 +118,18 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     }
 
     int c;
-    printf("input%s\n", input);
     while(!feof(csv_in)) {
-        printf("parsing the csv file");
+        printf("parsing the csv file\n");
         int colIndex = 0;
         int i;
 
-        //if(feof(csv_in)){
-          //break;
-        //}
-        //Get the next line from the input
         line = NULL;
         getline(&line, &size, csv_in);  
+        printf("input line: %s\n",line);        
 
         //Begining of a new row starts here
-        rows[rowIndex] = (Row *) malloc(sizeof(Row *));
-        for(i = 0; i < NUM_COLS; i++) {
-            rows[rowIndex]->colEntries = (char *) malloc(MAX_ENTRY_SIZE);
-        }
-
+        rows[rowIndex] = malloc(sizeof(Row));
+        
         //Gets first column
         token = strtok_single(line, ",\n");
         if(!token)
@@ -152,11 +143,11 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
         rows[rowIndex]->colEntries[colIndex].type = (char *) malloc(strlen(tokenType) + 1);
         strcpy(rows[rowIndex]->colEntries[colIndex].type, tokenType);
         colIndex++;
-        
+                
         while(token) {
             //Tokenizes the string based on ','
             //Starts from first column onward until end
-            token = strtok_single(NULL, ",\n");
+            token = strtok_single(NULL, ",\r\n");
             if(!token)
                 break;
             
@@ -166,18 +157,6 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
             strcpy(rows[rowIndex]->colEntries[colIndex].value, token);            
             rows[rowIndex]->colEntries[colIndex].type = (char *) malloc(strlen(tokenType) + 1);
             strcpy(rows[rowIndex]->colEntries[colIndex].type, tokenType);
-            
-            
-            /*
-            if(strcmp(tokenType,"int") == 0) { //Input is an integer
-
-            } else if (strcmp(tokenType,"char") == 0) { //Input is a string
-                
-            } else if (strcmp(tokenType,"float") == 0) { //Input is a float
-
-            } else { //Input is not a valid type
-
-            }*/
 
             //printf("%s\t\t\t %s\n", token, tokenType);
             colIndex++;
@@ -193,22 +172,13 @@ char * sortnew(FILE* csv_in, char * pathToCSV, char * columnToSort) {
     printf("the file should be sorted\n");
 
     //Print to a CSV file
-    csv_out = fopen(pathToCSV,"w");
     fprintf(csv_out, headerLine);
     printToCSV(csv_out, rows, validNumRows, NUM_COLS);
 
     fclose(csv_out);
     fclose(csv_in);
-    //Free Memory
-    for(i = 0; i < validNumRows; i++) {
-        for(j = 0; j < NUM_COLS; j++) {
-            free(rows[i]->colEntries[j].value);
-            free(rows[i]->colEntries[j].type);
-        }
-        free(rows[i]);
-    }
         
-    return pathToCSV;
+    return;
  //end of function
 }
 
@@ -224,7 +194,7 @@ void printToCSV(FILE *csv_out, Row ** rows, int validNumRows, int validNumCols) 
     } 
 }
 
-//Returns index of valid column, if not valid return 0
+//Returns index of valid column, if not valid return -1
 int isValidColumn(char* columnName) {
     int i;
     for(i = 0; i < (sizeof(validColumns) / sizeof(validColumns[i])); i++){
@@ -232,7 +202,7 @@ int isValidColumn(char* columnName) {
             return i;
         }
     }
-    return 0;
+    return -1;
 }
 
 //Returns the type of a given string token, does NOT perfom atoi() or atof()
@@ -254,58 +224,6 @@ char * findType(char* token) {
     return "int";
 }
 
-//Get a line from a file stream
-size_t parseline(char **lineptr, size_t *n, FILE *stream) {
-    char *bufptr = NULL;
-    char *p = bufptr;
-    size_t size;
-    int c;
-
-    if (lineptr == NULL) {
-        return -1;
-    } 
-    if (stream == NULL) {
-        return -1;
-    }
-    if (n == NULL) {
-        return -1;
-    }
-    bufptr = *lineptr;
-    size = *n;
-
-    c = fgetc(stream);
-    if (c == EOF) {
-        return -1;
-    }
-    if (bufptr == NULL) {
-        bufptr = malloc(2048);
-        if (bufptr == NULL) {
-            return -1;
-        }
-        size = 4096;
-    }
-    p = bufptr;
-    while(c != EOF) {
-        if ((p - bufptr) > (size - 1)) {
-            size = size + 128;
-            bufptr = realloc(bufptr, size);
-            if (bufptr == NULL) {
-                return -1;
-            }
-        }
-        *p++ = c;
-        if (c == '\n') {
-            break;
-        }
-        c = fgetc(stream);
-    }
-
-    *p++ = '\0';
-    *lineptr = bufptr;
-    *n = size;
-    
-    return p - bufptr - 1;
-}
 
 //Tokenize a given input based on a delimiter, returns NULL if consecutive delimiters
 char* strtok_single (char * string, char const * delimiter) {

@@ -79,7 +79,6 @@ const char* validColumnTypes[] = {
 };
 
 void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
-    printf("testing sort\n");
     int i,j;
     int columnToSortIndex, validNumRows;
     int rowIndex = 0;
@@ -110,7 +109,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     line = (char *)malloc(1024 * sizeof(char));
     getline(&line, &size, csv_in);
     
-    printf("input line: %s\n",line);
     headerLine = (char *) malloc(strlen(line));
     strcpy(headerLine,line);
     if(NULL == csv_in){
@@ -118,14 +116,13 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     }
 
     int c;
+    printf("parsing the csv file\n");    
     while(!feof(csv_in)) {
-        printf("parsing the csv file\n");
         int colIndex = 0;
         int i;
 
         line = NULL;
         getline(&line, &size, csv_in);  
-        printf("input line: %s\n",line);        
 
         //Begining of a new row starts here
         rows[rowIndex] = malloc(sizeof(Row));
@@ -136,7 +133,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
             break;
         tokenType = findType(token);
 
-        //printf("%s\t\t\t %s\n", token, tokenType);
         //Set the values in the rows matrix
         rows[rowIndex]->colEntries[colIndex].value = (char *) malloc(strlen(token) + 1);
         strcpy(rows[rowIndex]->colEntries[colIndex].value, token);
@@ -158,10 +154,8 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
             rows[rowIndex]->colEntries[colIndex].type = (char *) malloc(strlen(tokenType) + 1);
             strcpy(rows[rowIndex]->colEntries[colIndex].type, tokenType);
 
-            //printf("%s\t\t\t %s\n", token, tokenType);
             colIndex++;
         }
-        //printf("\n");
         rowIndex++;
     }
     validNumRows = rowIndex;

@@ -23,7 +23,7 @@ struct stat {
     time_t    st_ctime;   /* time of last status change */
 };
 
-int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, const char * output_dir);
+int travdir (const char * dir_name, char* column_to_sort, const char * output_dir);
 int outputMetadata(pid_t* childPids, int totalprocesses);
 int isAlreadySorted(char * path_name,char * column_to_sort);
     

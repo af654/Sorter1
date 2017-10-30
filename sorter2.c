@@ -14,7 +14,6 @@
 int main (int argc, char* argv[]) {
 	//processes,pids, and original parent
 	//storing children ids 
-	pid_t* childPids = (pid_t*)(malloc(sizeof(pid_t) * 256));
 	
 	//check inputs 
 	char *errorMessage = "The command line must follow either:\n./sorter -c  valid_column -d inputdir -o outputdir\n./sorter -c  valid_column -d inputdir\n./sorter -c  valid_column";
@@ -26,14 +25,14 @@ int main (int argc, char* argv[]) {
 	char* column_to_sort = argv[2];
 
 	if(argc == 3){ //Default behavior is search the current directory
-		travdir(childPids, "./", column_to_sort, NULL);
+		travdir("./", column_to_sort, NULL);
 	} else if (argc == 5){
 		if (strcmp(argv[3],"-d") != 0) {
 			printf("%s",errorMessage);
 			exit(1);
 		} else {
 			//time to check if this is a csv file or a directory
-			travdir(childPids, argv[4], column_to_sort, NULL);
+			travdir(argv[4], column_to_sort, NULL);
 		}
 	} else if (argc == 7){
 		if (strcmp(argv[3],"-d") != 0 && strcmp(argv[5],"-o") != 0) {
@@ -42,7 +41,7 @@ int main (int argc, char* argv[]) {
 		} else {
 			//time to check if this is a csv file or a directory
 			//-o output csv files to a certain directory thatdir if they specify -> argv[6] is output directory
-			travdir(childPids, argv[4], column_to_sort, argv[6]);
+			travdir(argv[4], column_to_sort, argv[6]);
 		}
 	} else {
 		printf("%s",errorMessage);
@@ -53,7 +52,7 @@ int main (int argc, char* argv[]) {
 }
 
 //traverse the directory for a csv 
-int travdir (pid_t* childPids, const char * input_dir_path, char* column_to_sort, const char * output_dir)
+int travdir (const char * input_dir_path, char* column_to_sort, const char * output_dir)
 {
 	char *directory_path = (char *) malloc(MAX_PATH_LENGTH);
 	strcpy(directory_path, input_dir_path);
@@ -121,8 +120,7 @@ int travdir (pid_t* childPids, const char * input_dir_path, char* column_to_sort
                     pid_t child_id;
                     child_id = getpid();
                     //store child process
-                    childPids[counter]=child_id;
-                    printf( "%sparent forked new child \n", child_id);
+                    printf("Parent forked new child with id: %d\n", child_id);
 				}
 			}
 		} 
@@ -188,19 +186,18 @@ int travdir (pid_t* childPids, const char * input_dir_path, char* column_to_sort
 					
 					printf("pathname: %s\n", csvFileOutputPath);
 					printf("d_name: %s\n",d_name);
-					char * path;
 
 					FILE *csvFileOut = fopen(csvFileOutputPath,"w");
 
 					sortnew(csvFile, csvFileOut, column_to_sort);
-					printf("path that child spit out sort process to%s\n", path);
+					printf("path that child spit out sort process to%s\n", csvFileOutputPath);
+					free(csvFileOutputPath);
+					free(file_name);
 				
 				} else if(pid>0) { //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);
 					pid_t child_id;
 					child_id = pid; 
-					//store child process
-					childPids[counter]=child_id;
 				}
 			//wait after parent is done looking for csvs and THEN wait for children to end
 			//once the child is done fork will return 0 
@@ -212,33 +209,30 @@ int travdir (pid_t* childPids, const char * input_dir_path, char* column_to_sort
 			exit(1);
 		}	
 	}
+
 	//WAIT FOR CHILDREN TO FINISH 
 	//go through children array -> CHILDREN THAT HAVENT FINISHED YET
 	int j;
 	int child_status;
 	pid_t child_ids_waiting_on;
 	int totalprocesses = counter;
-	printf("totalprocesses before waiting: %d\n",totalprocesses);
-	//childPids[counter]; 
+	printf("totalprocesses before waiting: %d\n",counter);
 
-	printf("total number of processes created %d\n", counter);	
-
-	while(counter >= 0){
+	while(counter > 0){
 		//wait() is used to wait until any one child process terminates
 		//wait returns process ID of the child process for which status is reported
 		child_ids_waiting_on = wait(&child_status);
-		//if((childPids[j] = wait(child_status, WNOHANG)) > 0){
-			//printf("%s parent caught SIGCHLD from\n", childPids[j]);
-			//children.remove(pid); //this isnt right this is python change to C language
-		//}
 		--counter;
 	}
 	printf("closing directory: %s\n", directory_path); //DEBUGGING 
+	free(directory_path);	
 	if(closedir(directory)){
 		printf("error could not close dir");
 		return -3;
 	}
+	
 	//outputMetadata(childPids,totalprocesses);
+	printf("total number of processes created %d\n\r", totalprocesses);		
 }
 
 //Will check the file name of th input file pointer.
@@ -251,28 +245,12 @@ int isAlreadySorted(char *pathname,char *column_to_sort) {
 	strcpy(compareString, "-sorted-");
 	strcat(compareString, column_to_sort);
 	strcat(compareString, ".csv");
-
 	if(strstr(pathname,compareString) == NULL) {
-		//free(compareString);		
+		free(compareString);		
 		return 0;
 	} else {
-		//free(compareString);
+		free(compareString);
 		return 1;		
 	}
 
 }
-
-/*//Your code's output will be a series of new CSV files outputted to the file whose name is the name of the CSV file sorted, with "-sorted-<fieldname>" postpended to the name.
-int outputMetadata(pid_t* childPids, int totalprocesses){
-	int i;
-	for(i=0;i<totalprocesses;i++){
-		printf("%sOne child pid is\n", childPids[i]);
-  		free(&childPids[i]);
-	}
-	free(childPids);
-	printf("total number of processes: %d\n", totalprocesses+1);
-
-	return 0;
-}
-*/
-

@@ -9,6 +9,8 @@
 #include "sorter.c"
 #include "sorter2.h"
 
+#define MAX_PATH_LENGTH 256
+
 int main (int argc, char* argv[]) {
 	//processes,pids, and original parent
 	//storing children ids 
@@ -51,21 +53,23 @@ int main (int argc, char* argv[]) {
 }
 
 //traverse the directory for a csv 
-int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, const char * output_dir)
+int travdir (pid_t* childPids, const char * input_dir_path, char* column_to_sort, const char * output_dir)
 {
-	printf("opening first directory : %s\n",dir_name);
+	char *directory_path = (char *) malloc(MAX_PATH_LENGTH);
+	strcpy(directory_path, input_dir_path);
+	
+	printf("opening first directory : %s\n",directory_path);
 	//counter counts how many child processes have been created
 	int counter = 0;
-	DIR * directory = opendir(dir_name);
+	DIR * directory = opendir(directory_path);
 
 	if (directory == NULL) {
-        printf ("Not a valid directory'%s'\n", dir_name);
+        printf ("Not a valid directory'%s'\n", directory_path);
         return 1;
-    }
-
+	}
+	
 	//while we go through the directory -> in the parent process keep looking for csv files
-	while(directory != NULL)
-	{
+	while(directory != NULL) {
 		struct dirent * currEntry;
 		char * d_name;
 		currEntry = readdir(directory);
@@ -89,10 +93,9 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				counter++;
 				//need to EXTEND THE PATH for next travdir call, working dir doesn't change (think adir/ -> adir/bdir/....)
 				int pathlength = 0;	
-				char path[256];
-				pathlength = snprintf(path, 256, "%s/%s",currEntry, d_name);
-				if(pathlength > 255)
-				{
+				char path[MAX_PATH_LENGTH];
+				pathlength = snprintf(path, MAX_PATH_LENGTH, "%s/%s",currEntry, d_name);
+				if(pathlength > MAX_PATH_LENGTH-1) {
 					printf("Path length is too long error");
 					return -4;
 				}
@@ -107,13 +110,11 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
          			break;
      			}
 				else if(pid==0){ //if child then go to newpath
-					//record new pathname
+					//Add on the d_name to the directory_
 					printf("This is the child process searching through next directory. My pid is %d and my parent's id is %d.\n", getpid(), getppid());
-					strcpy(currentPath,dir_name);
-					strcat(currentPath,"/");
-					strcat(currentPath,d_name);
-					directory = opendir(currentPath);
-					free(currentPath);
+					strcat(directory_path,"/");
+					strcat(directory_path,d_name);
+					directory = opendir(directory_path);
 				}
 				else if(pid>0){ //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);
@@ -130,7 +131,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 			printf("checked that the csv is a file\n");
 			char pathname [256];
 			FILE* csvFile;
-			sprintf(pathname, "%s/%s", dir_name, d_name);
+			sprintf(pathname, "%s/%s", directory_path, d_name);
 			csvFile = fopen(pathname, "r");
 
 			//Check to see if the file is a csv
@@ -140,6 +141,8 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 				printf("File is not a .csv: %s\n", d_name);
 			} 
 			else if (csvFile != NULL && !isAlreadySorted(pathname, column_to_sort)) {
+				//pathname has the full path to the file including extenstion
+				//directory_path has only the parent directories of the file
 				//IF THE FILE CONTAINS 
 				counter++;
 				//specify to what directory openddir and then do d_name
@@ -166,9 +169,9 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 						*lastdot = '\0';
 					}
 					
-					//Default behavior dumps files into current directory
+					//Default behavior dumps files into input directory
 					if(output_dir == NULL) {
-						strcpy(csvFileOutputPath,dir_name);
+						strcpy(csvFileOutputPath,directory_path);
 					} else { //If given an output directory
 						struct stat sb;
 						if (stat(output_dir, &sb) == -1) {
@@ -188,14 +191,10 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 					char * path;
 
 					FILE *csvFileOut = fopen(csvFileOutputPath,"w");
-					
-					free(csvFileOutputPath);
-					free(file_name);
 
 					sortnew(csvFile, csvFileOut, column_to_sort);
 					printf("path that child spit out sort process to%s\n", path);
-					//have to somehow end the child process when it ends before parent is done
-					
+				
 				} else if(pid>0) { //parent
 					printf("This is the parent process. My pid is %d and my parent's id is %d.\n", getpid(), pid);
 					pid_t child_id;
@@ -234,7 +233,7 @@ int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, cons
 		//}
 		--counter;
 	}
-	printf("closing directory: %s\n", dir_name); //DEBUGGING 
+	printf("closing directory: %s\n", directory_path); //DEBUGGING 
 	if(closedir(directory)){
 		printf("error could not close dir");
 		return -3;
@@ -254,10 +253,10 @@ int isAlreadySorted(char *pathname,char *column_to_sort) {
 	strcat(compareString, ".csv");
 
 	if(strstr(pathname,compareString) == NULL) {
-		free(compareString);		
+		//free(compareString);		
 		return 0;
 	} else {
-		free(compareString);
+		//free(compareString);
 		return 1;		
 	}
 

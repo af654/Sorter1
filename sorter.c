@@ -187,10 +187,10 @@ void printToCSV(FILE *csv_out, Row ** rows, int validNumRows, int validNumCols) 
     //Loop through the rows
     for (i = 0; i < validNumRows; i++) {
         //Loop through the columns
-        for(j = 0; j < validNumCols; j++) {
+        for(j = 0; j < validNumCols-1; j++) {
             fprintf(csv_out, "%s,", rows[i]->colEntries[j].value);
         }
-        fprintf(csv_out, "\n", rows[i]->colEntries[j].value);
+        fprintf(csv_out, "%s\n", rows[i]->colEntries[j].value);        
     } 
 }
 

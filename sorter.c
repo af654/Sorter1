@@ -143,6 +143,7 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
         while(token) {
             //Tokenizes the string based on ','
             //Starts from first column onward until end
+            //If the first character in the line is a " then we tokenize based on the quotation mark
             token = strtok_single(NULL, ",\r\n");
             if(!token)
                 break;
@@ -227,6 +228,16 @@ char* strtok_single (char * string, char const * delimiter) {
     if(source == NULL)         return NULL;
  
     if((p = strpbrk (source, delimiter)) != NULL) {
+        char *s = p+1;
+        if(*(s) == '"') { //Enountered a movie title that has commas in it
+            while(*(s+1) != '"') { //Go through util the next " and replace the commas with ;
+                if(*(s) == ',') {
+                    *s = ';';
+                }
+                s++;
+            }
+        }
+
        *p  = 0;
        result = source;
        source = ++p;

@@ -2,5 +2,4 @@
 a.out
 .vscode/launch.json
 sorter
-adir/movie_metadata3.csv
-adir/movie_metadata2.csv
+adir/*

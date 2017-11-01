@@ -83,7 +83,7 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     int i,j;
     int columnToSortIndex, validNumRows;
     int rowIndex = 0;
-    int *columnIndecesToSort;
+    int *columnIndeces;
     int *ptr;
     char **columnToSortTypes;
     char* columnToSortType;
@@ -96,7 +96,10 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
 
     //Get index of the column we want to sort by
     //columnToSortIndex = isValidColumn(columnToSort);
-    columnIndecesToSort = getColumnIndeces(columnToSort);
+    //should be 2
+    columnIndeces = (int *) malloc(NUM_COLS * sizeof(int));
+    getColumnIndeces(columnToSort,columnIndeces);
+    printf("ARE THESE CORRECT NOW : %d %d \n",columnIndeces[0],columnIndeces[1]);
 
     /*if(columnToSortIndex == -1) {
         printf("ERROR COLUMN IS NOT VALID!\n");
@@ -104,14 +107,17 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     }*/
     //columnToSortType = validColumnTypes[columnToSortIndex];
     //Get an array of strings to have the types
-    columnToSortTypes = (char **)malloc(sizeof(char **));
-    for (i = 0; i < sizeof(columnIndecesToSort[i]) / sizeof(int); i++) {
-        *(columnToSortTypes + i) = (char *)malloc(MAX_TYPE_SIZE);
-    }
-    setColumnTypes(columnIndecesToSort, columnToSortTypes);
 
-    printf("sorting this column: %s\n", columnToSort);
-    
+    columnToSortTypes = (char **)malloc(sizeof(char *) * 10);
+    for (i = 0; i < 2; i++) {
+        columnToSortTypes[i] = (char *)malloc(sizeof(char) * 10);
+        //*(columnToSortTypes + i) = (char *)malloc(MAX_TYPE_SIZE);
+    }
+
+    setColumnTypes(columnIndeces, columnToSortTypes);
+    printf("the types should be correct now");
+    printf("columnToSortTypes are this after calling set column types %s %s\n", columnToSortTypes[0],columnToSortTypes[1]);
+
     if(NULL == csv_in){
         printf("NULL FILE");
     }
@@ -176,8 +182,7 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     //Implment the sorting and call here
     //change columnToSortIndex to an array of integrs
     //doSort(rows,columnToSortIndex,columnToSortType,validNumRows);
-
-    doSort(rows,columnIndecesToSort,columnToSortTypes,validNumRows, (sizeof(columnIndecesToSort[i]) / sizeof(int)));
+    doSort(rows,columnIndeces,columnToSortTypes,validNumRows, 2);
 
     printf("the file should be sorted\n");
 
@@ -204,12 +209,12 @@ void printToCSV(FILE *csv_out, Row ** rows, int validNumRows, int validNumCols) 
     } 
 }
 
-int * getColumnIndeces(char* columnNames) {
+void getColumnIndeces(char* columnNames, int* columnIndeces) {
     //Instead of treating as a single string, treat as comma separated vcalues, tokenize baseed on that
     //Gets first column
     char* token;
+    printf("columnNames: %s\n", columnNames);
 
-    int *columnIndeces = (int *) malloc(NUM_COLS * sizeof(int));
     int validColumnCounter = 0;
     char *columnNamesCopy = (char *) malloc(strlen(columnNames) + 1);
     strcpy(columnNamesCopy, columnNames);
@@ -224,7 +229,10 @@ int * getColumnIndeces(char* columnNames) {
         return -1;
     }
 
+    printf("column that should be separated is: %s\n",token);
+    //prints director_facebook_likes
     int tokenColumn = isValidColumn(token);
+    printf("tokenColumn should return the indeces 5 or 10 for example %d\n",tokenColumn);
     if(tokenColumn == -1) { //default to director_name
         printf("Not a valid column, defaulting to director_name");
         columnIndeces[validColumnCounter] = 1; 
@@ -232,12 +240,16 @@ int * getColumnIndeces(char* columnNames) {
         columnIndeces[validColumnCounter] = tokenColumn; 
     }
     validColumnCounter++;
+    printf("counter of valid columns%d\n",validColumnCounter);
 
     while(token) {
         token = strtok_single(NULL, ",");
         if(!token)
             break;
+        //prints movie_title
+        printf("column that should be separated is: %s\n",token);
         int tokenColumn = isValidColumn(token);
+        printf("tokenColumn should return the indeces 5 or 10 for example %d\n",tokenColumn);
 
         if(tokenColumn == -1) { //default to director_name
             printf("Not a valid column, defaulting to director_name");
@@ -246,17 +258,21 @@ int * getColumnIndeces(char* columnNames) {
             columnIndeces[validColumnCounter] = tokenColumn; 
         }
         validColumnCounter++;
+        printf("counter of valid columns%d\n",validColumnCounter);
     }
 
     columnIndeces = realloc(columnIndeces, validColumnCounter*sizeof(int));
-    return columnIndeces;
+    printf("counter of valid columns RIGHT BEFORE RETURNING THE FUNCTION %d\n",validColumnCounter);
 }
 
 //Returns an array for strings that contain the types of the columns that will be sorted by
-void setColumnTypes(int *columnIndecesToSort, char **columnToSortTypes) {
+void setColumnTypes(int *columnIndeces, char **columnToSortTypes) {
     int i;
-    for(i = 0; i < (sizeof(columnIndecesToSort[i]) / sizeof(int)); i++) {
-        strcpy(columnToSortTypes[i],findType(validColumnTypes[columnIndecesToSort[i]]));
+    //shouldnt be 2 change it to how many columns there are - maybe validColumnCounter??
+    for(i = 0; i < 2; i++) {
+        printf("findtype function returns %s \n", findType(validColumnTypes[columnIndeces[i]]));
+        strcpy(columnToSortTypes[i],findType(validColumnTypes[columnIndeces[i]]));
+        printf("columnToSortTypes in the function setColumnTypes %s\n", columnToSortTypes[i]);
     }
 }
 

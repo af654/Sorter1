@@ -269,7 +269,7 @@ void getColumnIndeces(char* columnNames, int* columnIndeces) {
 void setColumnTypes(int *columnIndeces, char **columnToSortTypes) {
     int i;
     //shouldnt be 2 change it to how many columns there are - maybe validColumnCounter??
-    for(i = 0; i < 2; i++) {
+    for(i = 0; i < (sizeof(columnIndeces) / sizeof(int)); i++) {
         printf("findtype function returns %s \n", findType(validColumnTypes[columnIndeces[i]]));
         strcpy(columnToSortTypes[i],findType(validColumnTypes[columnIndeces[i]]));
         printf("columnToSortTypes in the function setColumnTypes %s\n", columnToSortTypes[i]);

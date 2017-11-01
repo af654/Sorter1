@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-void mergeSort(Row ** rows, int l, int r, int numColumns);
-void merge(Row ** rows, int l, int m, int r, int numColumns);
+void mergeSort(Row ** rows, int l, int r);
+void merge(Row ** rows, int l, int m, int r);
 char **colType;
 int *colIdx;
 int numColumns2;
@@ -17,27 +17,27 @@ int doSort(Row ** rows, int *sortColIdx, char **sortColType, int arrSize,int num
     printf("colIdx making sure the correct indeces: %d %d\n", colIdx[0], colIdx[1]);
     //printf("column type is correct or nah: %s %s \n", *(colType),*(colType + 1)); 
     printf("is this how we access the column types? %s %s \n", colType[0], colType[1]);
-    mergeSort(rows, 0, arrSize-1, numColumns2);
+    mergeSort(rows, 0, arrSize-1);
 
     return 0;
 }
 
-void mergeSort(Row **rows, int l, int r, int numColumns2) {
+void mergeSort(Row **rows, int l, int r) {
     printf("it got into mergesort");
     if (l < r){
         
         int m=(l+(r-1))/2;
         
-        mergeSort(rows, l, m, numColumns2);
+        mergeSort(rows, l, m);
         
-        mergeSort(rows, m+1, r, numColumns2);
+        mergeSort(rows, m+1, r);
         
-        merge(rows, l, m, r, numColumns2);
+        merge(rows, l, m, r);
     }
     
 }
 
-void merge(Row **row, int left, int mid, int right, int numColumns2) {
+void merge(Row **row, int left, int mid, int right) {
 	int i,j,k,c,count,index;
     int n1 = mid - left + 1;
     int n2 =  right - mid;
@@ -85,6 +85,10 @@ void merge(Row **row, int left, int mid, int right, int numColumns2) {
                     row[k] = R[j];
                     j++;
                 }
+           } 
+           if(c == 0) {
+            row[k] = L[i];
+            i++;            
            }
         } else if (c < 0) {
             row[k] = L[i];
@@ -120,7 +124,7 @@ long doCompare(Row *row1, Row *row2, int index, int count) {
     printf("but what are the values they are comparing %s %s \n", r1Value, r2Value);
     if (strcmp(colType[counter], "char") == 0) {
         //Skip the quotes
-        printf("compared the values to a char");
+        printf("compared the values to a char\n");
         if (*r1Value == '"') {
             r1Value++;
         }

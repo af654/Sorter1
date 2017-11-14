@@ -7,15 +7,6 @@
 #define NUM_ROWS 8192 //Max number of rows in a file is 8192
 #define MAX_ENTRY_SIZE 256
 
-//int main(int argc, char* argv[]) {
-    //FILE *csv_in = fopen("./movie_metadata.csv","r");
-    
-    //char * output = "./sorted_movie_metadata.csv";
-    //sort(csv_in, output, "num_critic_for_reviews");
-
-  //  fclose(csv_in);    
-//}
-
 const char* validColumns[] = {
     "color",
     "director_name",
@@ -88,7 +79,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     size_t size = 128;    
     //Allocate space for number of rows in file
     Row *rows[NUM_ROWS];
-    printf("starting to sort the file now\n");
 
     //Get index of the column we want to sort by
     columnToSortIndex = isValidColumn(columnToSort);
@@ -99,7 +89,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     }
     columnToSortType = validColumnTypes[columnToSortIndex];
 
-    printf("sorting this column: %s\n", columnToSort);
     
     if(NULL == csv_in){
         printf("NULL FILE");
@@ -116,7 +105,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     }
 
     int c;
-    printf("parsing the csv file\n");    
     while(!feof(csv_in)) {
         int colIndex = 0;
         int i;
@@ -163,8 +151,6 @@ void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
 
     //Implment the sorting and call here
     doSort(rows,columnToSortIndex,columnToSortType,validNumRows);
-
-    printf("the file should be sorted\n");
 
     //Print to a CSV file
     fprintf(csv_out, headerLine);

@@ -12,6 +12,4 @@ char* strtok_single(char* str, char const* delims);
 char* findType(char* token);
 int isValidColumn(char* columnName);
 void printToCSV(FILE *csv_out, Row ** rows, int numRows, int numCols);
-//int travdir (pid_t* childPids, const char * dir_name, char* column_to_sort, const char * output_dir);
-//int outputMetadata(pid_t* childPids, int totalprocesses);
 void sortnew(FILE *fp_in, FILE *fp_out, char * columnToSort);

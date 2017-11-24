@@ -14,7 +14,9 @@
 
 int counter = 0;
 pid_t root;
-stack_safe *StackOfSortedFiles;
+stack_safe *StackOfSortedFiles; 
+//Eventhough the forking may show this as the same adress taht is only virtual
+//Thus eventhough this is a pointer there are still separate stacks for each process
 char* outputCSV;
 
 int main (int argc, char* argv[]) {
@@ -179,8 +181,18 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 						} 
 						strcpy(csvFileOutputPath,output_dir);
 					}
-
+					
 					push(StackOfSortedFiles, sortRow(csvFile, column_to_sort));
+					printf("I am in child %d, Is the stack empty? : %d\n", getpid(), is_empty(StackOfSortedFiles));
+					printf("I am in child %d and am poping from the stack.\n", getpid());
+					Row ** tempRow = pop(StackOfSortedFiles);
+					printf("I am in child %d and have popped a row\n", getpid());
+					printf("I am in child %d, After poping once, Is the stack empty? : %d\n", getpid(), is_empty(StackOfSortedFiles));
+					printf("I am in child %d and am pushing back to the stack.\n", getpid());
+					push(StackOfSortedFiles, tempRow);
+					printf("I am in child %d, Is the stack empty? : %d\n", getpid(), is_empty(StackOfSortedFiles));
+					printf("\n");
+
 					free(csvFileOutputPath);
 					free(file_name);
 					exit(1);
@@ -197,6 +209,9 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 			exit(-1);
 		}	
 	}
+
+	printf("I am parent %d, Is the stack empty? : %d\n", getpid(), is_empty(StackOfSortedFiles));
+
 
 	//WAIT FOR CHILDREN TO FINISH 
 	int i = 0,j;

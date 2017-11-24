@@ -69,6 +69,95 @@ const char* validColumnTypes[] = {
     "int"
 };
 
+Row ** sortRow(FILE* csv_in, char * columnToSort) {
+    int i,j;
+    int columnToSortIndex, validNumRows;
+    int rowIndex = 0;
+    char* columnToSortType;
+    char* line = NULL;
+    char* token, *tokenType, *headerLine;            
+    size_t size = 128;    
+    //Allocate space for number of rows in file
+    Row *rows[NUM_ROWS];
+
+    //Get index of the column we want to sort by
+    columnToSortIndex = isValidColumn(columnToSort);
+
+    if(columnToSortIndex == -1) {
+        printf("ERROR COLUMN IS NOT VALID!\n");
+        exit(1);
+    }
+    columnToSortType = validColumnTypes[columnToSortIndex];
+
+    
+    if(NULL == csv_in){
+        printf("NULL FILE");
+    }
+    //Skip first row
+    char * input;
+    line = (char *)malloc(1024 * sizeof(char));
+    getline(&line, &size, csv_in);
+    
+    headerLine = (char *) malloc(strlen(line));
+    strcpy(headerLine,line);
+    if(NULL == csv_in){
+        printf("NULL FILE");
+    }
+
+    int c;
+    while(!feof(csv_in)) {
+        int colIndex = 0;
+        int i;
+
+        line = NULL;
+        getline(&line, &size, csv_in);  
+
+        //Begining of a new row starts here
+        rows[rowIndex] = malloc(sizeof(Row));
+        
+        //Gets first column
+        token = strtok_single(line, ",\n");
+        if(!token)
+            break;
+        tokenType = findType(token);
+
+        //Set the values in the rows matrix
+        rows[rowIndex]->colEntries[colIndex].value = (char *) malloc(strlen(token) + 1);
+        strcpy(rows[rowIndex]->colEntries[colIndex].value, token);
+        rows[rowIndex]->colEntries[colIndex].type = (char *) malloc(strlen(tokenType) + 1);
+        strcpy(rows[rowIndex]->colEntries[colIndex].type, tokenType);
+        colIndex++;
+                
+        while(token) {
+            //Tokenizes the string based on ','
+            //Starts from first column onward until end
+            //If the first character in the line is a " then we tokenize based on the quotation mark
+            token = strtok_single(NULL, ",\r\n");
+            if(!token)
+                break;
+            
+            tokenType = findType(token);
+            //Set the values in the rows matrix
+            rows[rowIndex]->colEntries[colIndex].value = (char *) malloc(strlen(token) + 1);
+            strcpy(rows[rowIndex]->colEntries[colIndex].value, token);            
+            rows[rowIndex]->colEntries[colIndex].type = (char *) malloc(strlen(tokenType) + 1);
+            strcpy(rows[rowIndex]->colEntries[colIndex].type, tokenType);
+
+            colIndex++;
+        }
+        rowIndex++;
+    }
+    validNumRows = rowIndex;
+
+    doSort(rows,columnToSortIndex,columnToSortType,validNumRows);
+
+    //Print to a CSV file
+    fclose(csv_in);
+        
+    return rows;
+ //end of function
+}
+
 void sortnew(FILE* csv_in, FILE* csv_out, char * columnToSort) {
     int i,j;
     int columnToSortIndex, validNumRows;

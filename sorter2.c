@@ -8,50 +8,63 @@
 #include <sys/wait.h>
 #include "sorter.c"
 #include "sorter2.h"
+#include "stack3.c"
 
 #define MAX_PATH_LENGTH 256
 
 int counter = 0;
-pid_t childPids[256];
 pid_t root;
+stack_safe *StackOfSortedFiles;
+char* outputCSV;
 
 int main (int argc, char* argv[]) {
-	//processes,pids, and original parent
-	//storing children ids 
 	
-	//check inputs 
-	char *errorMessage = "The command line must follow either:\n./sorter -c  valid_column -d inputdir -o outputdir\n./sorter -c  valid_column -d inputdir\n./sorter -c  valid_column";
-	if(strcmp(argv[1],"-c") !=0){
+	char* column_to_sort="";
+	char* starting_dir="";
+	char* output_dir="";
+
+	root = getpid();
+	printf("Initial PID: %d\n", root);
+
+	char *errorMessage = "The command line must specify a column to sort with arg -c \nfor example:\n./sorter -c  valid_column -d inputdir -o outputdir\n./sorter -c  valid_column -d inputdir\n./sorter -c  valid_column\n";
+	int i; 
+	for (i = 0; i < argc; i++) { 
+		//printf("%s\n", argv[i]); 
+		char* argument = argv[i];
+		if(strcmp(argument,"-d") == 0){
+			starting_dir = argv[i+1];
+		} else if(strcmp(argument,"-c") == 0) {
+			column_to_sort = argv[i+1];
+		} else if(strcmp(argument,"-o") == 0){
+			output_dir = argv[i+1];
+		}
+	}
+
+	//Creates a stack of size 20 to hold the sorted rows gotten from files
+	StackOfSortedFiles = stack_create(20);
+	printf("Just after creation, is the stack empty? : %d\n", is_empty(StackOfSortedFiles));
+
+
+	if(*column_to_sort==0){ 
 		printf("%s",errorMessage);
 		exit(1);
-	}
-
-	char* column_to_sort = argv[2];
-
-	if(argc == 3){ //Default behavior is search the current directory
-		travdir("./", column_to_sort, NULL);
-	} else if (argc == 5){
-		if (strcmp(argv[3],"-d") != 0) {
-			printf("%s",errorMessage);
-			exit(1);
-		} else {
+	} else if (*starting_dir==0){
+		//check for an output directory
+		if(*output_dir==0){
 			//time to check if this is a csv file or a directory
-			travdir(argv[4], column_to_sort, NULL);
+			return travdir("./", column_to_sort, NULL);
 		}
-	} else if (argc == 7){
-		if (strcmp(argv[3],"-d") != 0 && strcmp(argv[5],"-o") != 0) {
-			printf("%s",errorMessage);
-			exit(1);
-		} else {
-			//time to check if this is a csv file or a directory
-			//-o output csv files to a certain directory thatdir if they specify -> argv[6] is output directory
-			travdir(argv[4], column_to_sort, argv[6]);
+		else{
+			//there is a valid -c and valid -o parameter 
+			return travdir("./", column_to_sort, output_dir);
 		}
+	} else if (*output_dir==0){ //Default behavior is search the current directory - if output_dir is null
+		//assume that starting dir is not null
+		return travdir(starting_dir, column_to_sort, NULL);
 	} else {
-		printf("%s",errorMessage);
-		exit(1);		
+		//printf("all possible exist %s, %s, %s\n", column_to_sort, starting_dir, output_dir);
+		return travdir(starting_dir, column_to_sort, output_dir);	
 	}
-
 	return 0;
 }
 
@@ -102,7 +115,6 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 				pid_t pid,ppid;
 				//fork returns 0 if child process
 				pid = fork();
-				counter++;
 
 				if (pid < 0) {
           			printf("ERROR: Failed to fork process 1\n");
@@ -111,16 +123,12 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 				else if(pid == 0){ //if child then go to newpath
 					//Add on the d_name to the directory
 					pid_t child_id = getpid();
-					childPids[counter] = child_id;
 					strcat(directory_path,"/");
 					strcat(directory_path,d_name);
 					directory = opendir(directory_path);
 				}
-				else if(pid>0){ //parent
-					if(counter == 1) {
-						root = getpid();
-						printf("Initial PID: %d\n", root);
-					}
+				else if(pid > 0){ //parent
+					counter++;
 				}
 			}
 		} 
@@ -144,7 +152,6 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 				pid_t ppid,pid;
 				//fork returns 0 if child process
 				pid = fork();
-				counter++;
 
 				if (pid < 0) {
           			printf("Failed to fork process 1\n");
@@ -152,7 +159,6 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
      			}
 				//copies the code that you are running and returns zero to a new pid 
 				else if(pid == 0){ //if child then sort
-					childPids[counter] = getpid();
 					//change path for accessing the csv file
 					char * csvFileOutputPath = malloc(sizeof(char)*512);
 					//Remove the ".csv" from d_name to insert "-sorted-VALIDCOLUMN.csv
@@ -174,23 +180,12 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 						strcpy(csvFileOutputPath,output_dir);
 					}
 
-					strcat(csvFileOutputPath,"/");
-					strcat(csvFileOutputPath,file_name);
-					strcat(csvFileOutputPath,"-sorted-");
-					strcat(csvFileOutputPath,column_to_sort);
-					strcat(csvFileOutputPath,".csv");
-
-					FILE *csvFileOut = fopen(csvFileOutputPath,"w");
-
-					sortnew(csvFile, csvFileOut, column_to_sort);
+					push(StackOfSortedFiles, sortRow(csvFile, column_to_sort));
 					free(csvFileOutputPath);
 					free(file_name);
 					exit(1);
-				} else if(pid > 0) { //parent
-					if(counter == 1) {
-						root = getpid();
-						printf("Initial PID: %d\n", root);
-					}
+				} else if(pid > 0) { //parent, continue in loop
+					counter++;
 				}
 			//wait after parent is done looking for csvs and THEN wait for children to end
 			//once the child is done fork will return 0 
@@ -219,6 +214,15 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 		}
 		--totalprocesses;
 	}
+
+	printf("\nNo more children to be made.\nThe address of the stack is: %d\n", &StackOfSortedFiles);
+	printf("Is the stack empty? : %d\n", is_empty(StackOfSortedFiles));
+	
+	//Here the sorted files will be written to disk
+	//outputCSV = "sorted.csv";
+	//FILE *csvFileOut = fopen(outputCSV,"w");
+	//printToCSV(csvFileOut, pop(StackOfSortedFiles), 4, NUM_COLS);
+
 	
 	free(directory_path);	
 	if(closedir(directory)){
@@ -227,9 +231,11 @@ int travdir (const char * input_dir_path, char* column_to_sort, const char * out
 	}
 
 	if(getpid() == root) {
-		printf("\nTotal number of processes: %d\n\r", (i + counter));	
+		printf("\nTotal number of child processes: %d\n\r", i);
+		exit(i);
 	}
-	exit(i);
+
+	exit(i + 1); //Must count parent itself if it not the root
 }
 
 //Will check the file name of th input file pointer.

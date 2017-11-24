@@ -13,3 +13,4 @@ char* findType(char* token);
 int isValidColumn(char* columnName);
 void printToCSV(FILE *csv_out, Row ** rows, int numRows, int numCols);
 void sortnew(FILE *fp_in, FILE *fp_out, char * columnToSort);
+Row ** sortRow(FILE *fp_in, char * columnToSort);
